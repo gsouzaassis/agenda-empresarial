@@ -1,0 +1,1021 @@
+# 📦 Estrutura do projeto
+
+> **Replit** → crie um projeto **Vite + React + TypeScript**. Depois substitua/adicione os arquivos abaixo. 
+>
+> **Instalar dependências:**
+> ```bash
+> npm i zustand date-fns clsx
+> npm i -D tailwindcss postcss autoprefixer
+> ```
+>
+> **Rodar (dev):** `npm run dev`
+
+```
+.
+├── index.html
+├── package.json
+├── postcss.config.js
+├── tailwind.config.js
+├── tsconfig.json
+└── src/
+    ├── main.tsx
+    ├── App.tsx
+    ├── index.css
+    ├── types.ts
+    ├── lib/date.ts
+    ├── state/store.ts
+    ├── components/
+    │   ├── TopNav.tsx
+    │   ├── calendar/MonthCalendar.tsx
+    │   ├── agenda/DaySchedule.tsx
+    │   └── modals/NewAppointmentModal.tsx
+    └── pages/
+        ├── Agenda.tsx
+        ├── Clientes.tsx
+        ├── Servicos.tsx
+        ├── Relatorios.tsx
+        └── Recibos.tsx
+```
+
+---
+
+## 📄 `package.json`
+```json
+{
+  "name": "agenda-empresarial",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.12",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.6"
+  }
+}
+```
+
+---
+
+## ⚙️ `tailwind.config.js`
+```js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: "#f5f7ff",
+          100: "#e9edff",
+          200: "#c7d1ff",
+          300: "#9fafff",
+          400: "#6a7dff",
+          500: "#475aff",
+          600: "#2f3cf2",
+          700: "#2630c0",
+          800: "#1f2898",
+          900: "#1b2478"
+        }
+      }
+    }
+  },
+  plugins: []
+}
+```
+
+---
+
+## 🧩 `postcss.config.js`
+```js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+---
+
+## 🧱 `index.html`
+```html
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agenda Empresarial</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+---
+
+## 🎨 `src/index.css`
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-open: #10b981;      /* verde */
+  --c-confirmed: #2563eb; /* azul */
+  --c-canceled: #ef4444;  /* vermelho */
+  --c-special: #eab308;   /* amarelo */
+}
+
+body { @apply bg-slate-50 text-slate-900; }
+
+.container-page { @apply mx-auto max-w-6xl p-4 md:p-6; }
+.card { @apply rounded-2xl bg-white shadow-lg border border-slate-200; }
+.card-header { @apply p-4 border-b border-slate-200 font-semibold; }
+.card-body { @apply p-4; }
+.btn { @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium border; }
+.btn-primary { @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700; }
+.btn-ghost { @apply border-slate-200 hover:bg-slate-100; }
+.badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border; }
+.badge-open { border-color: var(--c-open); color: var(--c-open); }
+.badge-confirmed { border-color: var(--c-confirmed); color: var(--c-confirmed); }
+.badge-canceled { border-color: var(--c-canceled); color: var(--c-canceled); }
+.badge-special { border-color: var(--c-special); color: var(--c-special); }
+```
+
+---
+
+## 🧠 `src/types.ts`
+```ts
+export type ID = string;
+
+export type AppointmentStatus = 'open' | 'confirmed' | 'canceled';
+
+export interface Client {
+  id: ID;
+  cpfNif: string;
+  nome: string;
+  idade?: number;
+  telefone?: string;
+  email?: string;
+  observacoes?: string; // alergias, etc.
+}
+
+export interface ServiceItem {
+  id: ID;
+  nome: string;
+  duracaoMin: number; // 30, 60, 90...
+  preco: number; // em EUR
+  equipeId?: ID; // profissional/equipe responsável (opcional)
+}
+
+export interface Staff {
+  id: ID;
+  nome: string;
+  funcao?: string;
+}
+
+export interface SpecialDate {
+  dateISO: string; // '2025-09-08'
+  label: string;
+  color: string; // hex
+}
+
+export interface Appointment {
+  id: ID;
+  dateISO: string; // dia do agendamento
+  start: string;   // 'HH:mm'
+  end: string;     // 'HH:mm'
+  serviceId: ID;
+  clientId?: ID;   // pode agendar e depois vincular cliente
+  staffId?: ID;
+  status: AppointmentStatus;
+  observacoes?: string;
+  createdAt: string;
+}
+
+export interface Settings {
+  workDays: number[]; // 0..6 (domingo..sábado) permitidos
+  workStart: string;  // '08:00'
+  workEnd: string;    // '20:00'
+  slotMinutes: number; // 30
+  blockedWeekdays: number[]; // dias fechados
+  blockedTimes: string[];    // horários bloqueados ('13:00', '13:30', ...)
+  specialDates: SpecialDate[];
+  legend: {
+    open: string;
+    confirmed: string;
+    canceled: string;
+    special: string;
+  }
+}
+```
+
+---
+
+## 🧮 `src/lib/date.ts`
+```ts
+import { addMinutes, differenceInMinutes, format, isBefore, isEqual, parse, startOfDay } from 'date-fns';
+
+export function uid(prefix = 'id') {
+  return `${prefix}_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36)}`;
+}
+
+export function toISODate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+export function hhmm(date: Date) {
+  return format(date, 'HH:mm');
+}
+
+export function makeSlots(startHHmm: string, endHHmm: string, stepMin: number) {
+  const base = startOfDay(new Date());
+  const s = parse(startHHmm, 'HH:mm', base);
+  const e = parse(endHHmm, 'HH:mm', base);
+  let t = s;
+  const slots: string[] = [];
+  while (isBefore(t, e) || isEqual(t, e)) {
+    slots.push(format(t, 'HH:mm'));
+    t = addMinutes(t, stepMin);
+  }
+  // Remove o último se passa do fim exato
+  if (slots.length && slots[slots.length - 1] === format(e, 'HH:mm')) slots.pop();
+  return slots;
+}
+
+export function addHHmm(hhmmStr: string, minutes: number) {
+  const base = startOfDay(new Date());
+  const t = parse(hhmmStr, 'HH:mm', base);
+  return hhmm(addMinutes(t, minutes));
+}
+
+export function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
+  const base = startOfDay(new Date());
+  const as = parse(aStart, 'HH:mm', base).getTime();
+  const ae = parse(aEnd, 'HH:mm', base).getTime();
+  const bs = parse(bStart, 'HH:mm', base).getTime();
+  const be = parse(bEnd, 'HH:mm', base).getTime();
+  return as < be && bs < ae;
+}
+
+export function durationToSlots(durationMin: number, stepMin: number) {
+  return Math.ceil(durationMin / stepMin);
+}
+```
+
+---
+
+## 🗃️ `src/state/store.ts`
+```ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { Appointment, Client, ServiceItem, Settings, Staff } from '../types';
+import { uid, addHHmm, overlaps } from '../lib/date';
+
+interface AppState {
+  // dados
+  clients: Client[];
+  services: ServiceItem[];
+  staff: Staff[];
+  appointments: Appointment[];
+  settings: Settings;
+  // ações
+  upsertClient: (c: Partial<Client> & { cpfNif: string; nome: string }) => Client;
+  removeClient: (id: string) => void;
+  upsertService: (s: Partial<ServiceItem> & { nome: string; duracaoMin: number; preco: number }) => ServiceItem;
+  removeService: (id: string) => void;
+  upsertStaff: (s: Partial<Staff> & { nome: string }) => Staff;
+  removeStaff: (id: string) => void;
+  bookAppointment: (p: Omit<Appointment, 'id' | 'createdAt' | 'status'> & { status?: Appointment['status'] }) => Appointment | string;
+  updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
+  rescheduleAppointment: (id: string, dateISO: string, start: string, end: string) => string | void;
+  setSettings: (s: Partial<Settings>) => void;
+}
+
+const defaultSettings: Settings = {
+  workDays: [1,2,3,4,5],
+  workStart: '09:00',
+  workEnd: '18:00',
+  slotMinutes: 30,
+  blockedWeekdays: [0], // domingo fechado por padrão
+  blockedTimes: [],
+  specialDates: [],
+  legend: {
+    open: 'var(--c-open)',
+    confirmed: 'var(--c-confirmed)',
+    canceled: 'var(--c-canceled)',
+    special: 'var(--c-special)'
+  }
+};
+
+export const useApp = create<AppState>()(persist((set, get) => ({
+  clients: [],
+  services: [
+    { id: uid('svc'), nome: 'Consulta Padrão', duracaoMin: 60, preco: 60 },
+    { id: uid('svc'), nome: 'Procedimento Curto', duracaoMin: 30, preco: 35 }
+  ],
+  staff: [{ id: uid('stf'), nome: 'Profissional Principal', funcao: 'Designer' }],
+  appointments: [],
+  settings: defaultSettings,
+
+  upsertClient: (c) => {
+    const state = get();
+    const existing = c.id ? state.clients.find(x => x.id === c.id) : undefined;
+    if (existing) {
+      const updated = { ...existing, ...c } as Client;
+      set({ clients: state.clients.map(x => x.id === updated.id ? updated : x) });
+      return updated;
+    }
+    const created: Client = { id: uid('cli'), ...c } as Client;
+    set({ clients: [...state.clients, created] });
+    return created;
+  },
+  removeClient: (id) => set(state => ({ clients: state.clients.filter(c => c.id !== id) })),
+
+  upsertService: (s) => {
+    const state = get();
+    const existing = s.id ? state.services.find(x => x.id === s.id) : undefined;
+    if (existing) {
+      const updated = { ...existing, ...s } as ServiceItem;
+      set({ services: state.services.map(x => x.id === updated.id ? updated : x) });
+      return updated;
+    }
+    const created: ServiceItem = { id: uid('svc'), ...s } as ServiceItem;
+    set({ services: [...state.services, created] });
+    return created;
+  },
+  removeService: (id) => set(state => ({ services: state.services.filter(s => s.id !== id) })),
+
+  upsertStaff: (s) => {
+    const state = get();
+    const existing = s.id ? state.staff.find(x => x.id === s.id) : undefined;
+    if (existing) {
+      const updated = { ...existing, ...s } as Staff;
+      set({ staff: state.staff.map(x => x.id === updated.id ? updated : x) });
+      return updated;
+    }
+    const created: Staff = { id: uid('stf'), ...s } as Staff;
+    set({ staff: [...state.staff, created] });
+    return created;
+  },
+  removeStaff: (id) => set(state => ({ staff: state.staff.filter(s => s.id !== id) })),
+
+  bookAppointment: (p) => {
+    const state = get();
+    // valida regras de disponibilidade e conflito
+    const { settings, appointments, services } = state;
+    const weekday = new Date(p.dateISO).getDay();
+    if (settings.blockedWeekdays.includes(weekday)) return 'Dia bloqueado';
+
+    const svc = services.find(s => s.id === p.serviceId);
+    if (!svc) return 'Serviço inválido';
+
+    const end = p.end ?? addHHmm(p.start, svc.duracaoMin);
+
+    // bloqueios por horário
+    if (settings.blockedTimes.includes(p.start)) return 'Horário bloqueado';
+
+    // conflito com outros agendamentos (ignorando cancelados)
+    const hasConflict = appointments.some(a => a.dateISO === p.dateISO && a.status !== 'canceled' && overlaps(a.start, a.end, p.start, end));
+    if (hasConflict) return 'Conflito com outro agendamento';
+
+    const created: Appointment = {
+      id: uid('apt'),
+      dateISO: p.dateISO,
+      start: p.start,
+      end,
+      serviceId: p.serviceId,
+      clientId: p.clientId,
+      staffId: p.staffId,
+      status: p.status ?? 'open',
+      observacoes: p.observacoes,
+      createdAt: new Date().toISOString()
+    };
+    set({ appointments: [...state.appointments, created] });
+    return created;
+  },
+
+  updateAppointmentStatus: (id, status) => set(state => ({
+    appointments: state.appointments.map(a => a.id === id ? { ...a, status } : a)
+  })),
+
+  rescheduleAppointment: (id, dateISO, start, end) => {
+    const state = get();
+    const apt = state.appointments.find(a => a.id === id);
+    if (!apt) return 'Agendamento inexistente';
+    const hasConflict = state.appointments.some(a => a.id !== id && a.dateISO === dateISO && a.status !== 'canceled' && overlaps(a.start, a.end, start, end));
+    if (hasConflict) return 'Conflito com outro agendamento';
+    set({ appointments: state.appointments.map(a => a.id === id ? { ...a, dateISO, start, end } : a) });
+  },
+
+  setSettings: (s) => set(state => ({ settings: { ...state.settings, ...s } }))
+
+}), { name: 'agenda-store' }));
+```
+
+---
+
+## 🔝 `src/components/TopNav.tsx`
+```tsx
+import React from 'react';
+
+type TabKey = 'agenda' | 'clientes' | 'servicos' | 'relatorios' | 'recibos' | 'login';
+
+export function TopNav({ tab, setTab }: { tab: TabKey; setTab: (t: TabKey) => void }) {
+  const items: { key: TabKey; label: string }[] = [
+    { key: 'agenda', label: 'Agenda' },
+    { key: 'clientes', label: 'Clientes' },
+    { key: 'servicos', label: 'Serviços' },
+    { key: 'relatorios', label: 'Relatórios' },
+    { key: 'recibos', label: 'Recibos' },
+    { key: 'login', label: 'Login' },
+  ];
+  return (
+    <div className="sticky top-0 z-10 backdrop-blur bg-white/70 border-b">
+      <div className="container-page flex items-center justify-between">
+        <div className="text-lg font-bold">Agenda Empresarial</div>
+        <nav className="flex gap-1">
+          {items.map(i => (
+            <button key={i.key} onClick={() => setTab(i.key)}
+              className={`btn ${tab === i.key ? 'btn-primary' : 'btn-ghost'}`}>{i.label}</button>
+          ))}
+        </nav>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 📅 `src/components/calendar/MonthCalendar.tsx`
+```tsx
+import React from 'react';
+import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths } from 'date-fns';
+import { useApp } from '../../state/store';
+
+export function MonthCalendar({ current, setCurrent, selected, onSelect }:{
+  current: Date;
+  setCurrent: (d: Date) => void;
+  selected?: Date | null;
+  onSelect: (d: Date) => void;
+}){
+  const { settings } = useApp();
+
+  const start = startOfWeek(startOfMonth(current), { weekStartsOn: 0 });
+  const end = endOfWeek(endOfMonth(current), { weekStartsOn: 0 });
+  const days = eachDayOfInterval({ start, end });
+
+  return (
+    <div className="card">
+      <div className="card-header flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost" onClick={() => setCurrent(subMonths(current,1))}>◀</button>
+          <div className="font-semibold">{format(current, 'MMMM yyyy')}</div>
+          <button className="btn btn-ghost" onClick={() => setCurrent(addMonths(current,1))}>▶</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <select className="border rounded-lg px-2 py-1" value={current.getMonth()} onChange={(e)=>{
+            const d = new Date(current); d.setMonth(Number(e.target.value)); setCurrent(d);
+          }}>
+            {Array.from({length:12}).map((_,i)=> <option key={i} value={i}>{format(new Date(2025, i, 1), 'MMMM')}</option>)}
+          </select>
+          <select className="border rounded-lg px-2 py-1" value={current.getFullYear()} onChange={(e)=>{
+            const d = new Date(current); d.setFullYear(Number(e.target.value)); setCurrent(d);
+          }}>
+            {Array.from({length: 7}).map((_,i)=>{
+              const y = 2023 + i; return <option key={y} value={y}>{y}</option>
+            })}
+          </select>
+          <button className="btn" onClick={()=> setCurrent(new Date())}>Hoje</button>
+        </div>
+      </div>
+      <div className="card-body">
+        <div className="grid grid-cols-7 text-xs text-slate-500 mb-2">
+          {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d=> <div key={d} className="text-center">{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d)=>{
+            const isBlocked = settings.blockedWeekdays.includes(d.getDay());
+            const inMonth = isSameMonth(d, current);
+            const sel = selected && isSameDay(d, selected);
+            return (
+              <button
+                key={d.toISOString()}
+                onClick={()=> onSelect(d)}
+                disabled={isBlocked}
+                className={`h-20 rounded-xl border flex flex-col items-center justify-center gap-1
+                ${sel ? 'border-brand-600 ring-2 ring-brand-200' : 'border-slate-200'}
+                ${!inMonth ? 'opacity-40' : ''}
+                ${isBlocked ? 'bg-slate-100 cursor-not-allowed' : 'bg-white hover:bg-slate-50'}`}
+              >
+                <div className="text-sm font-medium">{format(d,'d')}</div>
+                {isBlocked && <div className="text-[10px] text-slate-500">Fechado</div>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <span className="badge badge-open">Abertos</span>
+          <span className="badge badge-confirmed">Confirmados</span>
+          <span className="badge badge-canceled">Cancelados</span>
+          <span className="badge badge-special">Datas especiais</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🕒 `src/components/agenda/DaySchedule.tsx`
+```tsx
+import React, { useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { useApp } from '../../state/store';
+import { durationToSlots, makeSlots, addHHmm } from '../../lib/date';
+import { NewAppointmentModal } from '../modals/NewAppointmentModal';
+
+export function DaySchedule({ date }:{ date: Date | null }){
+  const { settings, appointments, services } = useApp();
+  const [openNew, setOpenNew] = useState<{start: string} | null>(null);
+
+  const dateISO = date ? date.toISOString().slice(0,10) : '';
+
+  const slots = useMemo(()=>{
+    if (!date) return [] as string[];
+    return makeSlots(settings.workStart, settings.workEnd, settings.slotMinutes);
+  }, [date, settings.workStart, settings.workEnd, settings.slotMinutes]);
+
+  const list = useMemo(()=> appointments.filter(a => a.dateISO === dateISO).sort((a,b)=> a.start.localeCompare(b.start)), [appointments, dateISO]);
+
+  if (!date) return (
+    <div className="card"><div className="card-body text-slate-500">Selecione um dia no calendário para ver os horários.</div></div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="md:col-span-2 card">
+        <div className="card-header flex items-center justify-between">
+          <div className="font-semibold">Horários de {format(date,'dd/MM/yyyy')}</div>
+        </div>
+        <div className="card-body grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          {slots.map(s => {
+            const blocked = settings.blockedTimes.includes(s);
+            const hasApt = list.find(a => a.start === s && a.status !== 'canceled');
+            const label = blocked ? 'Bloqueado' : hasApt ? 'Ocupado' : s;
+            const cls = blocked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : hasApt ? 'bg-slate-200 text-slate-600 cursor-not-allowed' : 'bg-white hover:bg-brand-50';
+            return (
+              <button key={s} className={`border rounded-xl px-2 py-3 text-sm ${cls}`} disabled={blocked || !!hasApt}
+                onClick={()=> setOpenNew({ start: s })}
+              >{label}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header font-semibold">Agenda do dia</div>
+        <div className="card-body space-y-2">
+          {list.length === 0 && <div className="text-slate-500 text-sm">Sem agendamentos.</div>}
+          {list.map(a=>{
+            const svc = services.find(s => s.id === a.serviceId);
+            const color = a.status === 'open' ? 'badge-open' : a.status === 'confirmed' ? 'badge-confirmed' : 'badge-canceled';
+            return (
+              <div key={a.id} className="border rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">{a.start} - {a.end} · {svc?.nome ?? 'Serviço'}</div>
+                  <div className={`badge ${color} mt-1`}>{a.status}</div>
+                </div>
+                {/* ações como confirmar, cancelar, reagendar podem ser inseridas aqui (futuro) */}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {openNew && (
+        <NewAppointmentModal dateISO={dateISO} start={openNew.start} onClose={()=> setOpenNew(null)} />
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 🧾 `src/components/modals/NewAppointmentModal.tsx`
+```tsx
+import React, { useMemo, useState } from 'react';
+import { useApp } from '../../state/store';
+import { addHHmm } from '../../lib/date';
+
+export function NewAppointmentModal({ dateISO, start, onClose }:{ dateISO: string; start: string; onClose: ()=>void }){
+  const { services, clients, staff, settings, bookAppointment } = useApp();
+  const [serviceId, setServiceId] = useState(services[0]?.id ?? '');
+  const [clientId, setClientId] = useState<string>('');
+  const [novoCliente, setNovoCliente] = useState({ nome: '', cpfNif: '' });
+  const [staffId, setStaffId] = useState<string>(staff[0]?.id ?? '');
+  const [obs, setObs] = useState('');
+  const [err, setErr] = useState('');
+
+  const svc = useMemo(()=> services.find(s => s.id === serviceId), [services, serviceId]);
+  const end = svc ? addHHmm(start, svc.duracaoMin) : addHHmm(start, 30);
+
+  function submit(){
+    setErr('');
+    if (!serviceId) { setErr('Selecione um serviço.'); return; }
+    let cid = clientId || undefined;
+    if (!cid && novoCliente.nome && novoCliente.cpfNif){
+      // cria cliente rápido na store
+      const c = useApp.getState().upsertClient({ nome: novoCliente.nome, cpfNif: novoCliente.cpfNif });
+      cid = c.id;
+    }
+    const res = bookAppointment({ dateISO, start, end, serviceId, clientId: cid, staffId, observacoes: obs });
+    if (typeof res === 'string') { setErr(res); return; }
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end md:items-center md:justify-center p-4">
+      <div className="w-full md:max-w-xl card">
+        <div className="card-header flex items-center justify-between">
+          <div className="font-semibold">Novo Agendamento — {dateISO} · {start} → {end}</div>
+          <button onClick={onClose} className="btn btn-ghost">✕</button>
+        </div>
+        <div className="card-body space-y-4">
+          {err && <div className="text-sm text-red-600">{err}</div>}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-sm">Serviço
+              <select className="mt-1 w-full border rounded-lg px-2 py-2" value={serviceId} onChange={e=> setServiceId(e.target.value)}>
+                {services.map(s=> <option key={s.id} value={s.id}>{s.nome} · {s.duracaoMin}min</option>)}
+              </select>
+            </label>
+
+            <label className="text-sm">Profissional/Eq.
+              <select className="mt-1 w-full border rounded-lg px-2 py-2" value={staffId} onChange={e=> setStaffId(e.target.value)}>
+                {staff.map(s=> <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-sm">Cliente (existente)
+              <select className="mt-1 w-full border rounded-lg px-2 py-2" value={clientId} onChange={e=> setClientId(e.target.value)}>
+                <option value="">— selecionar —</option>
+                {clients.map(c=> <option key={c.id} value={c.id}>{c.nome} ({c.cpfNif})</option>)}
+              </select>
+            </label>
+            <div className="text-xs text-slate-500 flex items-end">ou cadastre rápido ao lado →</div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-sm">Novo cliente · Nome
+              <input className="mt-1 w-full border rounded-lg px-2 py-2" value={novoCliente.nome} onChange={e=> setNovoCliente(v=> ({...v, nome: e.target.value}))} placeholder="Nome completo" />
+            </label>
+            <label className="text-sm">Novo cliente · NIF/CPF
+              <input className="mt-1 w-full border rounded-lg px-2 py-2" value={novoCliente.cpfNif} onChange={e=> setNovoCliente(v=> ({...v, cpfNif: e.target.value}))} placeholder="000.000.000-00 / 000000000" />
+            </label>
+          </div>
+
+          <label className="text-sm">Observações
+            <textarea className="mt-1 w-full border rounded-lg px-2 py-2" rows={3} value={obs} onChange={e=> setObs(e.target.value)} placeholder="Observações, alergias, cuidados..."></textarea>
+          </label>
+
+          <div className="flex justify-end gap-2">
+            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" onClick={submit}>Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🗓️ `src/pages/Agenda.tsx`
+```tsx
+import React, { useState } from 'react';
+import { MonthCalendar } from '../components/calendar/MonthCalendar';
+import { DaySchedule } from '../components/agenda/DaySchedule';
+
+export default function AgendaPage(){
+  const [current, setCurrent] = useState(new Date());
+  const [selected, setSelected] = useState<Date | null>(null);
+
+  return (
+    <div className="container-page space-y-4">
+      <MonthCalendar current={current} setCurrent={setCurrent} selected={selected} onSelect={setSelected} />
+      <DaySchedule date={selected} />
+    </div>
+  );
+}
+```
+
+---
+
+## 👥 `src/pages/Clientes.tsx`
+```tsx
+import React, { useState } from 'react';
+import { useApp } from '../state/store';
+
+export default function ClientesPage(){
+  const { clients, upsertClient, removeClient } = useApp();
+  const [form, setForm] = useState({ nome: '', cpfNif: '', idade: '', telefone: '', email: '', observacoes: '' });
+
+  function add(){
+    if (!form.nome || !form.cpfNif) return;
+    upsertClient({ nome: form.nome, cpfNif: form.cpfNif, idade: Number(form.idade)||undefined, telefone: form.telefone, email: form.email, observacoes: form.observacoes });
+    setForm({ nome: '', cpfNif: '', idade: '', telefone: '', email: '', observacoes: '' });
+  }
+
+  return (
+    <div className="container-page grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="card">
+        <div className="card-header font-semibold">Novo Cliente</div>
+        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label className="text-sm">Nome
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={form.nome} onChange={e=> setForm(v=>({...v, nome: e.target.value}))} />
+          </label>
+          <label className="text-sm">NIF/CPF
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={form.cpfNif} onChange={e=> setForm(v=>({...v, cpfNif: e.target.value}))} />
+          </label>
+          <label className="text-sm">Idade
+            <input type="number" className="mt-1 w-full border rounded-lg px-2 py-2" value={form.idade} onChange={e=> setForm(v=>({...v, idade: e.target.value}))} />
+          </label>
+          <label className="text-sm">Telefone
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={form.telefone} onChange={e=> setForm(v=>({...v, telefone: e.target.value}))} />
+          </label>
+          <label className="text-sm">E-mail
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={form.email} onChange={e=> setForm(v=>({...v, email: e.target.value}))} />
+          </label>
+          <label className="text-sm md:col-span-2">Observações
+            <textarea className="mt-1 w-full border rounded-lg px-2 py-2" rows={3} value={form.observacoes} onChange={e=> setForm(v=>({...v, observacoes: e.target.value}))} />
+          </label>
+          <div className="md:col-span-2 flex justify-end">
+            <button className="btn btn-primary" onClick={add}>Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header font-semibold">Clientes</div>
+        <div className="card-body divide-y">
+          {clients.length === 0 && <div className="text-sm text-slate-500">Nenhum cliente cadastrado.</div>}
+          {clients.map(c=> (
+            <div key={c.id} className="py-3 flex items-center justify-between">
+              <div className="text-sm">
+                <div className="font-medium">{c.nome}</div>
+                <div className="text-slate-500">{c.cpfNif} · {c.telefone || '—'} · {c.email || '—'}</div>
+              </div>
+              <button className="btn btn-ghost" onClick={()=> removeClient(c.id)}>Remover</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🛠️ `src/pages/Servicos.tsx`
+```tsx
+import React, { useState } from 'react';
+import { useApp } from '../state/store';
+
+export default function ServicosPage(){
+  const { services, upsertService, removeService, staff, upsertStaff, removeStaff, settings, setSettings } = useApp();
+  const [svc, setSvc] = useState({ nome: '', duracaoMin: '60', preco: '60' });
+  const [stf, setStf] = useState({ nome: '' });
+
+  function addSvc(){
+    if(!svc.nome) return;
+    upsertService({ nome: svc.nome, duracaoMin: Number(svc.duracaoMin)||30, preco: Number(svc.preco)||0 });
+    setSvc({ nome: '', duracaoMin: '60', preco: '60' });
+  }
+  function addStf(){
+    if(!stf.nome) return;
+    upsertStaff({ nome: stf.nome });
+    setStf({ nome: '' });
+  }
+
+  return (
+    <div className="container-page grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="card lg:col-span-2">
+        <div className="card-header font-semibold">Serviços</div>
+        <div className="card-body">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+            <input className="border rounded-lg px-2 py-2" placeholder="Nome do serviço" value={svc.nome} onChange={e=> setSvc(v=>({...v, nome: e.target.value}))} />
+            <input className="border rounded-lg px-2 py-2" placeholder="Duração (min)" value={svc.duracaoMin} onChange={e=> setSvc(v=>({...v, duracaoMin: e.target.value}))} />
+            <input className="border rounded-lg px-2 py-2" placeholder="Preço (€)" value={svc.preco} onChange={e=> setSvc(v=>({...v, preco: e.target.value}))} />
+            <button className="btn btn-primary" onClick={addSvc}>Adicionar</button>
+          </div>
+          <div className="divide-y">
+            {services.map(s=> (
+              <div key={s.id} className="py-3 flex items-center justify-between">
+                <div className="text-sm">
+                  <div className="font-medium">{s.nome}</div>
+                  <div className="text-slate-500">{s.duracaoMin} min · €{s.preco.toFixed(2)}</div>
+                </div>
+                <button className="btn btn-ghost" onClick={()=> removeService(s.id)}>Remover</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header font-semibold">Profissionais/Equipes</div>
+        <div className="card-body">
+          <div className="flex gap-2 mb-3">
+            <input className="border rounded-lg px-2 py-2 w-full" placeholder="Nome" value={stf.nome} onChange={e=> setStf({ nome: e.target.value })} />
+            <button className="btn btn-primary" onClick={addStf}>Adicionar</button>
+          </div>
+          <div className="space-y-2">
+            {staff.map(s=> (
+              <div key={s.id} className="border rounded-xl p-3 flex items-center justify-between">
+                <div className="text-sm font-medium">{s.nome}</div>
+                <button className="btn btn-ghost" onClick={()=> removeStaff(s.id)}>Remover</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card lg:col-span-3">
+        <div className="card-header font-semibold">Configurações de Agenda</div>
+        <div className="card-body grid grid-cols-1 md:grid-cols-4 gap-3">
+          <label className="text-sm">Início
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={settings.workStart} onChange={e=> setSettings({ workStart: e.target.value })} />
+          </label>
+          <label className="text-sm">Fim
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" value={settings.workEnd} onChange={e=> setSettings({ workEnd: e.target.value })} />
+          </label>
+          <label className="text-sm">Slot (min)
+            <input type="number" className="mt-1 w-full border rounded-lg px-2 py-2" value={settings.slotMinutes} onChange={e=> setSettings({ slotMinutes: Number(e.target.value) })} />
+          </label>
+          <label className="text-sm">Dias fechados (0=Dom..6=Sáb)
+            <input className="mt-1 w-full border rounded-lg px-2 py-2" placeholder="ex: 0,6" onBlur={e=>{
+              const arr = e.target.value.split(',').map(x=> Number(x.trim())).filter(x=> !Number.isNaN(x));
+              setSettings({ blockedWeekdays: arr });
+            }} />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 📊 `src/pages/Relatorios.tsx`
+```tsx
+import React from 'react';
+import { useApp } from '../state/store';
+
+export default function RelatoriosPage(){
+  const { appointments, services } = useApp();
+  const total = appointments.length;
+  const concl = appointments.filter(a=> a.status !== 'canceled').length;
+  const canc = appointments.filter(a=> a.status === 'canceled').length;
+  const receita = appointments.reduce((sum, a)=>{
+    const svc = services.find(s=> s.id === a.serviceId);
+    return sum + (a.status !== 'canceled' ? (svc?.preco ?? 0) : 0);
+  }, 0);
+
+  function exportJSON(){
+    const data = JSON.stringify({ appointments, services }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `backup-agenda-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="container-page grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="card"><div className="card-body"><div className="text-sm text-slate-500">Total</div><div className="text-3xl font-semibold">{total}</div></div></div>
+      <div className="card"><div className="card-body"><div className="text-sm text-slate-500">Concluídos/Abertos</div><div className="text-3xl font-semibold">{concl}</div></div></div>
+      <div className="card"><div className="card-body"><div className="text-sm text-slate-500">Cancelados</div><div className="text-3xl font-semibold">{canc}</div></div></div>
+
+      <div className="card md:col-span-3">
+        <div className="card-header font-semibold">Receita estimada</div>
+        <div className="card-body text-2xl font-semibold">€ {receita.toFixed(2)}</div>
+      </div>
+
+      <div className="md:col-span-3 flex justify-end">
+        <button className="btn" onClick={exportJSON}>Exportar Backup (JSON)</button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🧾 `src/pages/Recibos.tsx`
+```tsx
+import React from 'react';
+
+export default function RecibosPage(){
+  return (
+    <div className="container-page">
+      <div className="card">
+        <div className="card-header font-semibold">Recibos</div>
+        <div className="card-body text-sm text-slate-500">
+          Em breve: geração de recibos com dados do cliente, serviço, valor e mensagem de pós-cuidados.
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 🧭 `src/App.tsx`
+```tsx
+import React, { useState } from 'react';
+import AgendaPage from './pages/Agenda';
+import ClientesPage from './pages/Clientes';
+import ServicosPage from './pages/Servicos';
+import RelatoriosPage from './pages/Relatorios';
+import RecibosPage from './pages/Recibos';
+import { TopNav } from './components/TopNav';
+import './index.css';
+
+type Tab = 'agenda' | 'clientes' | 'servicos' | 'relatorios' | 'recibos' | 'login';
+
+export default function App(){
+  const [tab, setTab] = useState<Tab>('agenda');
+
+  return (
+    <div className="min-h-screen">
+      <TopNav tab={tab} setTab={setTab} />
+      {tab === 'agenda' && <AgendaPage />}
+      {tab === 'clientes' && <ClientesPage />}
+      {tab === 'servicos' && <ServicosPage />}
+      {tab === 'relatorios' && <RelatoriosPage />}
+      {tab === 'recibos' && <RecibosPage />}
+      {tab === 'login' && (
+        <div className="container-page">
+          <div className="card"><div className="card-body text-sm text-slate-500">Tela de login (Google/OAuth) — placeholder para próxima etapa.</div></div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 🚀 `src/main.tsx`
+```tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+```
+
+---
+
+## ✅ Passos seguintes (próximos commits)
+
+1) **Agenda**: adicionar confirmação/cancelamento/reagendamento diretamente nos cards da Agenda do Dia.
+2) **Clientes**: adicionar importação via formulário público (auto-registro) e upload CSV opcional.
+3) **Serviços**: vincular profissional obrigatório/opcional na criação do agendamento.
+4) **Relatórios**: filtros por mês/ano e envio por e-mail (requer backend).
+5) **Recibos**: template PDF + assinatura digital (requer backend).
+6) **Login**: autenticação com Google (OAuth) + perfis (admin/colaborador/cliente).
+7) **Backups**: agendamento mensal automático e envio por e-mail (backend + cron/worker).

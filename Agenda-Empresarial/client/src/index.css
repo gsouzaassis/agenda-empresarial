@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(210, 40%, 98%);
+  --foreground: hsl(222.2, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222.2, 84%, 4.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222.2, 84%, 4.9%);
+  --primary: hsl(239, 84%, 67%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222.2, 47.4%, 11.2%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222.2, 47.4%, 11.2%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
+  --ring: hsl(239, 84%, 67%);
+  --radius: 0.75rem;
+  --font-sans: "Inter", sans-serif;
+
+  /* Brand colors */
+  --brand-50: hsl(236, 100%, 98%);
+  --brand-100: hsl(239, 100%, 95%);
+  --brand-200: hsl(239, 100%, 87%);
+  --brand-300: hsl(239, 100%, 78%);
+  --brand-400: hsl(239, 100%, 70%);
+  --brand-500: hsl(239, 84%, 67%);
+  --brand-600: hsl(239, 84%, 60%);
+  --brand-700: hsl(239, 69%, 49%);
+  --brand-800: hsl(239, 69%, 40%);
+  --brand-900: hsl(239, 69%, 31%);
+
+  /* Status colors */
+  --c-open: hsl(158, 64%, 52%);
+  --c-confirmed: hsl(221, 83%, 53%);
+  --c-canceled: hsl(0, 84%, 60%);
+  --c-special: hsl(48, 96%, 53%);
+
+  /* Altura da barra inferior (tabs) do app */
+  --app-bottom: 64px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.container-page { @apply mx-auto max-w-6xl p-4 md:p-6; }
+
+.card { @apply rounded-2xl bg-white shadow-lg border border-slate-200; }
+.card-header { @apply p-4 border-b border-slate-200 font-semibold; }
+.card-body { @apply p-4; }
+
+.btn { @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium border transition-all duration-150; }
+.btn-primary { @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700 hover:border-brand-700; }
+.btn-ghost { @apply border-slate-200 hover:bg-slate-100; }
+.btn-xs { padding: 4px 8px; font-size: 12px; line-height: 1; border-radius: 10px; }
+
+.badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border; }
+.badge-open { border-color: var(--c-open); color: var(--c-open); background: hsl(158, 64%, 52%, 0.1); }
+.badge-confirmed { border-color: var(--c-confirmed); color: var(--c-confirmed); background: hsl(221, 83%, 53%, 0.1); }
+.badge-canceled { border-color: var(--c-canceled); color: var(--c-canceled); background: hsl(0, 84%, 60%, 0.1); }
+.badge-special { border-color: var(--c-special); color: var(--c-special); background: hsl(48, 96%, 53%, 0.1); }
+
+/* NOVA: Agendamentos (Abertos + Confirmados) */
+.badge-appointments {
+  border-color: var(--c-confirmed);
+  color: var(--c-confirmed);
+  background: hsl(221, 83%, 53%, 0.1);
+}
+
+.sidebar-item { @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 cursor-pointer; }
+.sidebar-item:hover { @apply bg-accent; }
+.sidebar-item.active { background: hsl(var(--brand-50)); color: hsl(var(--brand-700)); }
+
+.calendar-day { @apply aspect-square border border-slate-200 transition-all duration-150; }
+.calendar-day:hover { @apply bg-accent; }
+.calendar-day.today { background: hsl(var(--brand-50)); border-color: hsl(var(--brand-200)); }
+
+.time-slot { @apply border border-slate-200 transition-all duration-150; }
+.time-slot:hover { @apply bg-accent; }
+.time-slot.occupied { background: hsl(var(--brand-50)); border-color: hsl(var(--brand-200)); }
+
+.form-control { @apply w-full px-3 py-2 border border-slate-200 rounded-xl bg-white transition-all duration-150; }
+.form-control:focus { @apply outline-none border-brand-600 ring-2 ring-brand-200; }
+
+.select-xs { font-size: 12px; padding: 6px 8px; border-radius: 10px; }
+
+/* ====== Mobile helpers ====== */
+/* Espaço para a barra inferior (~72px) + safe area */
+@media (max-width: 767px) {
+  .with-mobile-tabbar {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  /* empurra bottom-sheets para cima da barra (usado nos modais) */
+  .sheet-offset-bottom {
+    bottom: calc(env(safe-area-inset-bottom) + var(--app-bottom, 64px));
+  }
+  /* Calendário mais compacto */
+  .cal-day { height: 44px; padding: 4px; }
+  .cal-day-num { font-size: 13px; }
+  .legend-xs .badge { font-size: 11px; padding: 2px 6px; }
+}
+
+/* Realizado */
+.badge-done {
+  border-color: var(--c-open);
+  color: var(--c-open);
+  background: hsl(158, 64%, 52%, 0.1);
+}
+
+/* Input number: manter setas nativas */
+input[type="number"] {
+  color: hsl(var(--brand-700));
+  font-weight: 600;
+  appearance: auto;
+  -moz-appearance: auto;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: inner-spin-button;
+  opacity: 1;
+  background: transparent;
+  cursor: pointer;
+}
